@@ -11,6 +11,8 @@ using SmartMeter.Services.TodRuleServices;
 using SmartMeter.Services.TariffServices;
 using SmartMeter.Services.TariffSlabServices;
 using SmartMeter.Services.UserServices;
+using SmartMeter.Services.RabbitMQMeterProcessingService.Utils;
+using SmartMeter.Services.RabbitMQMeterProcessingService;
 
 namespace SmartMeter
 {
@@ -21,7 +23,7 @@ namespace SmartMeter
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            
+
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -29,6 +31,10 @@ namespace SmartMeter
 
             builder.Services.AddDbContext<SmartMeterDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            //builder.Services.AddDbContextFactory<SmartMeterDbContext>(options =>
+            //options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
             builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -39,16 +45,14 @@ namespace SmartMeter
             builder.Services.AddScoped<ITariffServices, TariffServices>();
             builder.Services.AddScoped<ITariffSlabServices, TariffSlabServices>();
             builder.Services.AddScoped<IUserServices, UserServices>();
-
+            builder.Services.AddScoped<DatabaseService>();
+            builder.Services.AddHostedService<RabbitMqConsumerService>();
 
             // Configure file upload limits
             builder.Services.Configure<IISServerOptions>(options =>
             {
                 options.MaxRequestBodySize = 10 * 1024 * 1024; // 10MB
             });
-
-           
-
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
@@ -63,6 +67,7 @@ namespace SmartMeter
 
             });
 
+            //builder.Services.AddSingleton(new DatabaseService("Host=localhost;Port=5433;Username=postgres;Password=Gopal@097;Database=smartmeterdb"));
 
             builder.Services.AddSwaggerGen(c =>
             {
@@ -102,7 +107,7 @@ namespace SmartMeter
 
             app.UseHttpsRedirection();
 
-           app.UseAuthentication();
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
